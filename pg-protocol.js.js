@@ -1,5 +1,10 @@
 const net = require("net");
 // const { buffer } = require("stream/consumers");
+const config = {
+  host: "localhost",
+  port: 5432,
+  password:"sanjay",
+};
 
 const readBuffer = (bufValue) => {
   const length = bufValue.readUInt32LE(0);
@@ -13,7 +18,7 @@ const readBuffer = (bufValue) => {
   console.log("Mechanism:", mechanism);
 };
 
-const sendStartUpMessages = () => {
+const createStartUpMessages = () => {
   console.log(" Sending Startup Messages ");
   let userName = "postgres";
   let db = "Hotel";
@@ -33,16 +38,29 @@ const sendStartUpMessages = () => {
   return body;
 };
 
-const config = {
-  host: "localhost",
-  port: 5432,
-};
+
+const createPasswordMessage=()=>{
+  
+  const passwordBuf= Buffer.from(config.password+"\0");
+  const lenthBuf=Buffer.alloc(4);
+  lenthBuf.writeInt32BE(passwordBuf.length+4);
+  let pgPassword=Buffer.concat([Buffer.from('p')],lenthBuf,passwordBuf);
+  console.log(pgPassword , " this is my password for Postgres");
+  return pgPassword;
+
+}
+
+
+
 const client = net.createConnection(
   { host: config.host, port: config.port },
   () => {
     console.log("Connecting to the Host ");
-    let payload = sendStartUpMessages();
+    let payload = createStartUpMessages();
     client.write(payload);
+    //read the payload
+
+    // if there is 3 in this buffer server is asking for the password 
   }
 );
 
