@@ -3,15 +3,15 @@ const config = {
   host: "localhost",
   port: 5432,
   password: "sanjay",
+  userName:"postgres",
+  db:"Hotel",
 };
 
 const createStartUpMessages = () => {
   console.log(" Sending Startup Messages ");
-  let userName = "postgres";
-  let db = "Hotel";
   let protocolNumber = 196608;
 
-  const params = ["user", userName, "database", db, "client_encoding", "UTF8"];
+  const params = ["user", config.userName, "database", config.db , "client_encoding", "UTF8"];
   let protocolBuffer = Buffer.alloc(4); // 00 00 00 00
   protocolBuffer.writeInt32BE(protocolNumber);
 
@@ -35,7 +35,7 @@ const createPasswordMessage = () => {
 };
 
 const sendQuery = () => {
-  let query = "SELECT now()";
+  let query = `SELECT now()`;
   let queryBuf = Buffer.from(query + "\0");
   let lengthOfQueryBuf = Buffer.alloc(4);
   lengthOfQueryBuf.writeInt32BE(queryBuf.length + 4);
@@ -135,7 +135,9 @@ client.on("data", (msg) => {
       console.log("RESULT ", result);
     } else if (responseMsgType === "C") {
       const tag = responseBody.toString();
-      console.log(" Query Exectued",tag)
+      console.log(" Query Exectued", tag);
+    } else if (responseMsgType === "E") {
+      console.log("getting error");
     }
   }
 });
