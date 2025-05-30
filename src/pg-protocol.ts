@@ -1,17 +1,33 @@
 const net = require("net");
-const config = {
+
+interface Config {
+  host: String;
+  port: Number;
+  password: String;
+  userName: String;
+  db: String;
+}
+
+const config: Config = {
   host: "localhost",
   port: 5432,
   password: "sanjay",
-  userName:"postgres",
-  db:"Hotel",
+  userName: "postgres",
+  db: "Hotel",
 };
 
-const createStartUpMessages = () => {
+const createStartUpMessages = ():Buffer => {
   console.log(" Sending Startup Messages ");
   let protocolNumber = 196608;
 
-  const params = ["user", config.userName, "database", config.db , "client_encoding", "UTF8"];
+  const params = [
+    "user",
+    config.userName,
+    "database",
+    config.db,
+    "client_encoding",
+    "UTF8",
+  ];
   let protocolBuffer = Buffer.alloc(4); // 00 00 00 00
   protocolBuffer.writeInt32BE(protocolNumber);
 
@@ -25,7 +41,7 @@ const createStartUpMessages = () => {
   return body;
 };
 
-const createPasswordMessage = () => {
+const createPasswordMessage = ():Buffer => {
   const passwordBuf = Buffer.from(config.password + "\0");
   const lenthBuf = Buffer.alloc(4);
   lenthBuf.writeInt32BE(passwordBuf.length + 4);
@@ -34,7 +50,7 @@ const createPasswordMessage = () => {
   return pgPassword;
 };
 
-const sendQuery = () => {
+const sendQuery = ():Buffer => {
   let query = `SELECT now()`;
   let queryBuf = Buffer.from(query + "\0");
   let lengthOfQueryBuf = Buffer.alloc(4);
@@ -47,7 +63,7 @@ const sendQuery = () => {
   return finalQueryBuf;
 };
 
-function parseRowDescription(payload) {
+function parseRowDescription(payload: Buffer): string[]{
   const fieldCount = payload.readUInt16BE(0);
   let offset = 2;
   const fieldNames = [];
@@ -58,11 +74,11 @@ function parseRowDescription(payload) {
     fieldNames.push(name);
     offset = end + 19; // skip name + 18 bytes of metadata
   }
-
+  console.log(fieldNames);
   return fieldNames;
 }
 
-function parseDataRow(payload) {
+function parseDataRow(payload: Buffer) : (string | null)[] {
   const fieldCount = payload.readUInt16BE(0);
   let offset = 2;
   const fields = [];
@@ -90,9 +106,9 @@ const client = net.createConnection(
     client.write(payload);
   }
 );
-let ready = false;
-let fieldNames = [];
-client.on("data", (msg) => {
+let ready: boolean = false;
+let fieldNames: string[] = [];
+client.on("data", (msg: Buffer) => {
   let offSet = 0;
   while (offSet < msg.length) {
     let responseMsgType = msg.toString("utf-8", offSet, offSet + 1);
@@ -128,8 +144,9 @@ client.on("data", (msg) => {
       fieldNames = parseRowDescription(responseBody);
     } else if (responseMsgType === "D") {
       const row = parseDataRow(responseBody);
-      const result = {};
-      fieldNames.forEach((name, i) => {
+      const result: Record<string, any> = {};
+
+      fieldNames.forEach((name: string, i) => {
         result[name] = row[i];
       });
       console.log("RESULT ", result);
@@ -142,10 +159,10 @@ client.on("data", (msg) => {
   }
 });
 
-client.on("error", (err) => {
+client.on("error", (err: Error) => {
   console.error(" ERROR: Something Went Wrong", err);
 });
 
 client.on("end", () => {
-  console.warn("🔚 Connection ended");
+  console.warn(" Connection ended");
 });

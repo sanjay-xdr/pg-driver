@@ -1,0 +1,18 @@
+{
+  "name": "pg-driver",
+  "version": "1.0.0",
+  "description": "A minimal PostgreSQL wire protocol driver in Node.js/TypeScript.",
+ "main": "dist/pg-protocol.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/pg-protocol.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+      "typescript": "^5.4.5",
+    "@types/node": "^22.15.27"
+  }
+}

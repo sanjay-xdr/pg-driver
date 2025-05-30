@@ -40,10 +40,11 @@ The client follows these steps:
    ```sh
    git clone https://github.com/sanjay-xdr/pg-driver
    cd pg-driver
+   npm i
    ```
 
 2. **Edit connection settings:**
-   Open `pg-protocol.js` and set your PostgreSQL credentials:
+   Open `pg-protocol.ts` and set your PostgreSQL credentials:
 
    ```js
    const config = {
@@ -55,9 +56,10 @@ The client follows these steps:
    };
    ```
 
-3. **Run the client:**
+3. **Build and Run the client:**
    ```sh
-   node pg-protocol.js
+   npm run build
+   npm run start
    ```
    You should see output for the connection, authentication, and query results (e.g., current date/time).
 
