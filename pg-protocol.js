@@ -3,19 +3,7 @@ const net = require("net");
 const config = {
   host: "localhost",
   port: 5432,
-  password:"sanjay",
-};
-
-const readBuffer = (bufValue) => {
-  const length = bufValue.readUInt32LE(0);
-  const field = bufValue.readUInt32LE(4);
-  const singleByte = bufValue.readUInt8(8);
-  const mechanism = bufValue.toString("utf8", 9, 22);
-
-  console.log("Length:", length);
-  console.log("Field:", field);
-  console.log("Single Byte:", singleByte);
-  console.log("Mechanism:", mechanism);
+  password: "sanjay",
 };
 
 const createStartUpMessages = () => {
@@ -38,66 +26,77 @@ const createStartUpMessages = () => {
   return body;
 };
 
-
-const createPasswordMessage=()=>{
-  const passwordBuf= Buffer.from(config.password+'\0');
-  const lenthBuf=Buffer.alloc(4);
-  lenthBuf.writeInt32BE(passwordBuf.length+4);
-  let pgPassword=Buffer.concat([Buffer.from('p'),lenthBuf,passwordBuf]);
-  console.log(pgPassword , " this is my password for Postgres");
+const createPasswordMessage = () => {
+  const passwordBuf = Buffer.from(config.password + "\0");
+  const lenthBuf = Buffer.alloc(4);
+  lenthBuf.writeInt32BE(passwordBuf.length + 4);
+  let pgPassword = Buffer.concat([Buffer.from("p"), lenthBuf, passwordBuf]);
+  console.log(pgPassword, " this is my password for Postgres");
   return pgPassword;
+};
 
-}
-
-
+ 
 
 const client = net.createConnection(
   { host: config.host, port: config.port },
   () => {
     console.log("Connecting to the Host ");
     let payload = createStartUpMessages();
-    client.write(payload); 
-
-
-    // 
-
-    // if there is 3 in this buffer server is asking for the password 
+    client.write(payload);
+    //
+    // if there is 3 in this buffer server is asking for the password
   }
 );
 
 client.on("data", (msg) => {
-  console.log(" RECEIVED MESSAGE FROM DB ", msg);
+  console.log("Message from the DB ", msg);
+  console.log("========================================");
+  let offSet = 0;
+  while (offSet < msg.length) {
+console.log(" CURRENT VALUE OF OFFSET ", offSet);
+    let responseMsgType = msg.toString("utf-8", offSet, offSet+1);
+    offSet++;
+    console.log(responseMsgType, " this the Response Msg Type");
 
-  // RECEIVED MESSAGE FROM DB  <Buffer 52 00 00 00 08 00 00 00 03> 
-    // 52 is R Which Means Authentication is Request 
-    //03 is for ClearTextPassword
-    // read the payload
+    let responseLength = msg.readInt32BE(offSet);
+    offSet += 4;
 
-    if(msg && msg.length>0){
+    let responseBody = msg.slice(offSet, offSet + responseLength - 4); //slicing the first part of payload to read it further
+    offSet += responseLength - 4; //move to next msg
 
-      const messageType= msg.toString("utf-8",0,1);
-      console.log(messageType , " This is My Message Type")
-
-      if(messageType=='R'){
-          // this means postgres is requesting for authentication
-          // and here we are doing a CLEARTEXT PASSWORD Made changes in postgre config file default is sha 256
-
-          let authenticationType=msg.readInt32BE(5); // 5 means skip first 5 values
-          console.log(typeof authenticationType)
-          if(authenticationType==3){
-            // using CLEARTEXT PASSWORD
-            // createPasswordMessage();
-            client.write(createPasswordMessage());
-          }
-      }else{
-        console.log("Getting Error")
+    if (responseMsgType == "R") {
+      // asking for authentication{}
+      console.log(responseBody, " this is the responseBOdy");
+      const authType = responseBody.readInt32BE(0);
+      if (authType == 0) {
+        //Authentication SUccessful
+        console.log("========================================");
+        console.log("Authentication SUccessful");
+        console.log("========================================");
+      } else if (authType == 3) {
+        //asking for clearTextPassword
+        console.log("========================================");
+        client.write(createPasswordMessage());
+        console.log("Password Sent Successful");
+        console.log("========================================");
+      } else {
+        // asking for any other type of password
       }
+    } else if (responseMsgType == "Z") {
+      console.log(" Ready FOR QUERY MESSAGE");
+      //send your query here
+
+    } else if (responseMsgType === "S") {
+      console.log(" I am here in S")
+      // ParameterStatus - ignore for now
+    } else if (responseMsgType === "K") {
+      // BackendKeyData - ignore for now
+      console.log(" I am here in K")
 
     }
-
-
-
-  // readBuffer(msg);
+    console.log(" CURRENT VALUE OF OFFSET in WHILE LOOP END", offSet);
+  }
+  console.log(" CURRENT VALUE OF OFFSET OUTSIDE WHILE LOOP ", offSet);
 });
 
 client.on("error", (err) => {
