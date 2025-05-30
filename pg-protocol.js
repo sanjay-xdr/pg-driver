@@ -40,11 +40,10 @@ const createStartUpMessages = () => {
 
 
 const createPasswordMessage=()=>{
-  
-  const passwordBuf= Buffer.from(config.password+"\0");
+  const passwordBuf= Buffer.from(config.password+'\0');
   const lenthBuf=Buffer.alloc(4);
   lenthBuf.writeInt32BE(passwordBuf.length+4);
-  let pgPassword=Buffer.concat([Buffer.from('p')],lenthBuf,passwordBuf);
+  let pgPassword=Buffer.concat([Buffer.from('p'),lenthBuf,passwordBuf]);
   console.log(pgPassword , " this is my password for Postgres");
   return pgPassword;
 
@@ -57,8 +56,10 @@ const client = net.createConnection(
   () => {
     console.log("Connecting to the Host ");
     let payload = createStartUpMessages();
-    client.write(payload);
-    //read the payload
+    client.write(payload); 
+
+
+    // 
 
     // if there is 3 in this buffer server is asking for the password 
   }
@@ -66,6 +67,35 @@ const client = net.createConnection(
 
 client.on("data", (msg) => {
   console.log(" RECEIVED MESSAGE FROM DB ", msg);
+
+  // RECEIVED MESSAGE FROM DB  <Buffer 52 00 00 00 08 00 00 00 03> 
+    // 52 is R Which Means Authentication is Request 
+    //03 is for ClearTextPassword
+    // read the payload
+
+    if(msg && msg.length>0){
+
+      const messageType= msg.toString("utf-8",0,1);
+      console.log(messageType , " This is My Message Type")
+
+      if(messageType=='R'){
+          // this means postgres is requesting for authentication
+          // and here we are doing a CLEARTEXT PASSWORD Made changes in postgre config file default is sha 256
+
+          let authenticationType=msg.readInt32BE(5); // 5 means skip first 5 values
+          console.log(typeof authenticationType)
+          if(authenticationType==3){
+            // using CLEARTEXT PASSWORD
+            // createPasswordMessage();
+            client.write(createPasswordMessage());
+          }
+      }else{
+        console.log("Getting Error")
+      }
+
+    }
+
+
 
   // readBuffer(msg);
 });
